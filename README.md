@@ -1,27 +1,27 @@
 # Agent Engineering Lab
 
-I design, orchestrate and ship software with teams of AI agents, then verify it like a security engineer.
+Notes on how I build software using AI coding agents, and how I check their work. The code itself is
+private; this repo is the summary.
 
-**Tools:** Hermes Agent, Claude Code, Codex, Claude tool-use, Deepgram, ElevenLabs, Fly.io, SQLite, FastAPI.
+Tools I've used: Hermes Agent, Claude Code, Codex, Claude tool use, Deepgram, ElevenLabs, Fly.io,
+SQLite, FastAPI.
 
-## What I do
+## What I've worked on
 
-- **Multi-agent engineering.** Parallel AI sub-agents on separate workstreams, integrated, reviewed and gated by automated tests (3,400+) before anything ships.
-- **Voice and conversational AI.** Production phone agents with tool use, live speech pipelines, and real-call evaluation across speech, voice and model vendors.
-- **Cloud and data.** Deployed on Fly.io with SQLite-backed storage, load-tested for concurrency, measured results kept separate from estimates.
-- **Integrations.** Scheduling and CRM connections behind clean provider interfaces, using OAuth and scoped keys.
-- **Benchmarking.** Reproducible harnesses so decisions come from data.
+- Running several AI agents in parallel on separate parts of a project, then merging and reviewing
+  their changes. Nothing ships unless the automated tests pass (3,400+ tests).
+- Phone agents that use tools, with live speech-to-text and text-to-speech. I tested different
+  speech, voice and model vendors on real calls.
+- Deployment on Fly.io with SQLite, plus load tests for concurrent calls. I keep measured numbers
+  separate from estimates.
+- Scheduling and CRM integrations using OAuth and scoped API keys.
+- Small benchmark scripts so I can compare options with data instead of guessing.
 
-## Security mindset
+## Security
 
-AI agents are internet-facing systems. I design for authenticated inputs, tenant isolation, bounded cost, escaped output, minimal data retention, secrets out of prompts and code, and audit trails. I found and fixed a real concurrency race before it reached customers.
+An AI agent that answers phone calls is an internet-facing system, so I treat it like one:
+authenticated inputs, tenant isolation, cost limits, escaped output, minimal data retention, no
+secrets in prompts or code, and audit logs. Load testing caught a real concurrency race, which I
+fixed before it reached customers.
 
-## What it shows
-
-- Scoping, delegating and verifying work across many agents at once
-- Every claim labeled by evidence level, nothing oversold
-- Shipping, measuring and fixing across backend, voice, cloud and security
-
-Implementation details are private.
-
-Portfolio: https://samiali38183.github.io/projects/agent-lab.html
+Portfolio write-up: https://samiali38183.github.io/projects/agent-lab.html
