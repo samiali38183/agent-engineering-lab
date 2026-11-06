@@ -4,6 +4,8 @@ How I run several AI coding agents on one production codebase without losing con
 
 The code is private. This repo is the write-up, plus sanitized descriptions of the mechanisms in [`docs/`](docs/). The codebase the workflow was built around is Call Kettle, an AI phone receptionist for service businesses that runs on Fly.io. A cleaned-up public snapshot of it is at [samiali38183/call-kettle](https://github.com/samiali38183/call-kettle).
 
+**In five lines.** (1) This is a write-up of how I coordinate several AI coding agents on one private codebase, Call Kettle. (2) The workflow rules, test counts, a measured concurrency bug and a security self-review are real and traced to private sources listed in [docs/EVIDENCE.md](docs/EVIDENCE.md). (3) The product is deployed on Fly.io and has no customers, no revenue and no measured production traffic. (4) The strongest evidence is private; I can walk through it live. (5) Each claim carries a status label (DEPLOYED, TESTED, IMPLEMENTED, PLANNED), defined below.
+
 Agents involved: **Hermes Agent** (coordination, QA, repo work, scheduled jobs), **Claude Code** (in-repo implementation and refactors against the test suite) and **Codex** (used on the same machine; I do not describe a dedicated role for it because I have no written lane for it). The product's own runtime agent is **Claude Haiku** using tool use.
 
 ## How claims are labeled
@@ -27,7 +29,7 @@ flowchart TB
 
     subgraph control["Coordination"]
         rules["AGENTS.md: binding rules every agent reads first"]
-        state["PROJECT_STATE.md and ops state: current truth plus exact next action"]
+        state["Project state document and ops state: current truth plus exact next action"]
         coord["Hermes coordinator: claims work, delegates, owns integration"]
         board["Work board: lane claims and file ownership"]
     end
@@ -44,7 +46,7 @@ flowchart TB
         audit["Claim and price audits on public text"]
         ci["CI on every push and PR"]
         selfcheck["Live self-check after deploy"]
-        beat["Heartbeat every 15 min and health alerts"]
+        beat["Heartbeat (15 min private, 6 h public snapshot) and health alerts"]
     end
 
     approve["Owner approval: spend, outbound contact, price and policy changes"]
@@ -82,10 +84,10 @@ The shape matters more than the tool names. Agents do not talk to each other dir
 **IMPLEMENTED, used daily.** Details in [docs/WORKFLOW.md](docs/WORKFLOW.md).
 
 - **One rule file, written for any tool.** `AGENTS.md` holds the binding rules (brand, pricing source, secrets, outbound limits, deploy windows) and opens with "start here, whatever tool you are". The public snapshot also carries a `CLAUDE.md` for Claude Code. Rules are written as constraints an agent can check itself against, not as goals.
-- **One state document.** `PROJECT_STATE.md` records what is deployed, what is verified, what is blocked and the exact next action. A new session reads it, then `git log` and `git status`, then re-verifies against reality (test suite, self-check, audit) before continuing. The message "CONTINUE" means exactly that.
+- **One state document.** a project state document records what is deployed, what is verified, what is blocked and the exact next action. A new session reads it, then `git log` and `git status`, then re-verifies against reality (test suite, self-check, audit) before continuing. The message "CONTINUE" means exactly that.
 - **A coordinator that delegates to lanes.** Each subagent gets a lane (for example a dashboard UI lane, a call-summary lane, a CRM lane, an integrator lane) with a named output file, and no two writers share a file. The written operating state caps delegates per run, caps retries at two per action, and tells the coordinator to record a blocker and move on rather than loop.
 - **Stop controls.** A `PAUSE` file halts the coordinator. A `LOCK` file that expires after three hours stops two runs working at once.
-- **Two machines, one repo, a claim protocol.** A work board assigns lanes and file ownership to each machine. A stdlib helper (`work_board.py claim | done | check`) takes claims by pushing, refuses claims outside your lane, fails on stale claims with no progress note, and never force-pushes. It has its own tests, including a two-clone race.
+- **Two machines, one repo, a claim protocol.** A work board assigns lanes and file ownership to each machine. A stdlib helper script (subcommands claim, done and check) takes claims by pushing, refuses claims outside your lane, fails on stale claims with no progress note, and never force-pushes. It has its own tests, including a two-clone race.
 - **One integrator.** Lane branches end with a "READY" checkpoint commit. One integrator lane merges them into a release branch, runs the gates and deploys. Agents do not merge each other's work.
 - **Fallback models are written down.** If the primary model's capacity runs out, the rules name a fallback order and require review of anything a weaker local model produces. That is policy in `AGENTS.md`; I am not claiming it has been exercised.
 
@@ -150,15 +152,15 @@ Some limits are also enforced in code: features such as texting and call recordi
 2. Each utterance is sanitized and sent to Claude Haiku with a typed tool list built per tenant. A tool the tenant has disabled is not offered, and is checked again when called.
 3. While the response ends in `tool_use`, code runs the tool, appends the `tool_result` and calls the model again. Iterations per turn are capped at 4, reply tokens are capped, and the API client has a short timeout and one retry.
 4. Tool inputs are validated again in code: text cleaning, slot parsing, hours and lead-time rules, one booking per slot (a `BEGIN IMMEDIATE` transaction plus a unique constraint), and ownership checks so a caller can only change bookings made on their own call or caller ID.
-5. Before any text is spoken, guards compare it with what happened. The agent cannot say it booked, cancelled or transferred unless the matching tool succeeded, and spoken dates are corrected against the real calendar.
+5. Before any text is spoken, guards compare it with what happened. The agent cannot say it booked, cancelled or rescheduled unless the matching tool succeeded (the claim guard has three patterns: booked, cancelled, moved; transfers are not covered by it), and spoken dates are corrected against the real calendar.
 6. Emergency phrases (gas, carbon monoxide, fire) bypass the model and go to a fixed 911-plus-owner-alert path.
 
-The tenant config is a strict Pydantic schema (`extra: forbid`), so a typo fails at load, not mid-call. Details and the threat each layer addresses: [docs/GUARDRAILS.md](docs/GUARDRAILS.md).
+The tenant's `Policy` block is a strict Pydantic model (`extra: forbid`), and hours, timezone, webhook URLs and the AI disclosure are validated at load; unknown top-level keys in the tenant file are not yet rejected (a known gap, listed in the call-kettle README). Details and the threat each layer addresses: [docs/GUARDRAILS.md](docs/GUARDRAILS.md).
 
 ## Deployment and load testing
 
 - **DEPLOYED:** FastAPI on Fly.io, one small VM, SQLite in WAL mode on a persistent volume, one process. Daily database backup with a restore test, plus volume snapshots. Tenant configs can be pushed to the volume through a validated admin endpoint without a deploy.
-- **DEPLOYED:** an external heartbeat (a GitHub Actions job every 15 minutes checks the API health route and the public site) and, as of late October, scheduled agent jobs for health alerts and a weekday brief.
+- **DEPLOYED:** an external heartbeat (a GitHub Actions job that checks the API health route and the public site; it runs every 15 minutes in the private repo and every 6 hours in the public snapshot's workflow) and, as of late October, scheduled agent jobs for health alerts and a weekday brief.
 - **TESTED:** a concurrency harness drives the real FastAPI app in-process with a stubbed 900 ms model call at 8, 16, 32 and 64 simultaneous callers.
 
 **What load testing caught.** The per-tenant concurrent-call ceiling was a count-then-act check. The call row is written several steps after the count, so a burst of simultaneous webhooks all read the same count and all passed. Measured before the fix: with a ceiling of 24 and 64 simultaneous callers, **42 were admitted**. The fix holds a call in an in-process set under a lock between the check and its row. After it, admission equals the ceiling exactly at 16, 32 and 64 callers, and a regression test pins it. An earlier run with 42 calls admitted at once had also lost two transcript writes.
@@ -188,10 +190,10 @@ Call Kettle answers calls for home-service businesses, books or moves appointmen
 | Public | Private |
 |---|---|
 | This write-up and `docs/` (generalized mechanisms) | Directive files, state documents, controller logs, work-board contents |
-| [call-kettle](https://github.com/samiali38183/call-kettle): sanitized app code, tools, strict config schema, about 1,550 tests, claim scanner | Production config, tenant data, pricing and margin models, prospect research, sales material, credentials |
+| [call-kettle](https://github.com/samiali38183/call-kettle): sanitized app code, tools, strict `Policy` schema, about 1,550 tests, claim scanner | Production config, tenant data, pricing and margin models, prospect research, sales material, credentials |
 | Load-test numbers quoted above | The concurrency harness and the race fix |
 
-I do not publish business figures, prospect or customer information, or sales material here. Private file names appear only where they give you something to ask me about.
+I do not publish business figures, prospect or customer information, or sales material here. Private files are described rather than named; the claims stay traceable by description.
 
 ## Limitations
 

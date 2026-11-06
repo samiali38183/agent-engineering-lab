@@ -11,7 +11,7 @@ The rule behind all of it: a prompt instruction is a request, a line of code is 
 | Telephony webhook signature check on every voice route; fail closed if no token or signature | Forged webhooks driving the agent or running up cost | TESTED, probed against production |
 | Tenant resolved from the signed URL, never from model or caller text | Cross-tenant access | TESTED (`test_isolation`, public) |
 | Caller utterance length cap; per-number call-rate limit; per-IP limits on public endpoints | Flooding, token-stuffing | TESTED |
-| Strict tenant config schema (`extra: forbid`, validators) | A typo or hostile edit surfacing mid-call | TESTED (public) |
+| Strict `Policy` model (`extra: forbid`) plus load-time validators for hours, timezone, webhook URLs and the AI disclosure in the opening line; unknown top-level keys in the tenant file are not yet rejected | A typo or hostile edit surfacing mid-call | TESTED (public) |
 | Route guard test that enumerates every route and asserts it is either deliberately public or refuses anonymous requests | A future route shipped without authentication | TESTED |
 | Email header and calendar-invite field sanitization | Header injection through caller-supplied names | TESTED |
 
@@ -29,7 +29,7 @@ The rule behind all of it: a prompt instruction is a request, a line of code is 
 
 | Control | Threat | Evidence |
 |---|---|---|
-| Claim guard: the reply may not say booked, cancelled, moved or transferred unless the matching tool call succeeded this call | The model confirming something that did not happen | TESTED (23 truth-invariant tests and 22 failure-injection tests at the time of review; public code) |
+| Claim guard: the reply may not say booked, cancelled or moved/rescheduled unless the matching tool call succeeded this call (pattern-based; there is no pattern for transfers) | The model confirming something that did not happen | TESTED (23 truth-invariant tests and 22 failure-injection tests at the time of review; public code) |
 | Date correction on spoken dates | Wrong weekday or ordinal read aloud | IMPLEMENTED (public) |
 | No price quotes unless the exact figure is in the tenant's FAQ; no repair or safety advice | Liability from improvised advice | PROMPT-LEVEL ONLY: a prompt rule plus live spot checks, not a code guarantee. This is the weakest row in the table and I treat it as such |
 
@@ -90,7 +90,7 @@ A written policy, built from reading public rules on 2026-10-01. It states that 
 
 ## 9. What these layers do not cover
 
-- A model that is manipulated into saying something false that is not a booking, cancellation or transfer claim. The claim guard covers consequences; it does not make every sentence true.
+- A model that is manipulated into saying something false that is not a booking, cancellation or reschedule claim. The claim guard covers consequences; it does not make every sentence true.
 - A compromised platform account or a leaked key. Controls above reduce exposure, they do not replace key rotation and account hygiene.
 - Behavior under real customer load, which is unmeasured.
 - Anything an independent reviewer would find. The security review was written by the builder.

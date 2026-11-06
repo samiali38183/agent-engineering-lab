@@ -1,6 +1,6 @@
 # Workflow: how agent work is delegated, claimed, integrated and stopped
 
-A generalized description of the mechanisms I use on a private codebase. Names of files are real; contents are described, not quoted, because they include business detail. Labels (DEPLOYED, TESTED, IMPLEMENTED, PLANNED) are defined in the [README](../README.md).
+A generalized description of the mechanisms I use on a private codebase. Private files are described generically rather than named, and their contents are described, not quoted, because they include business detail. The agent rules file (`AGENTS.md`) also exists in the public snapshot. Labels (DEPLOYED, TESTED, IMPLEMENTED, PLANNED) are defined in the [README](../README.md).
 
 ## Design principles
 
@@ -15,10 +15,10 @@ A generalized description of the mechanisms I use on a private codebase. Names o
 | Artifact | Purpose | Who writes it |
 |---|---|---|
 | `AGENTS.md` | Binding rules and "where things are". First file any agent reads. | Owner and coordinator; edits are commits |
-| `PROJECT_STATE.md` | Current state in fixed sections (production, verified, not deployed, blockers, security, next action). Older sections are marked HISTORICAL when a newer one supersedes them. | Coordinator after each verified change |
+| State document | Current state in fixed sections (production, verified, not deployed, blockers, security, next action). Older sections are marked HISTORICAL when a newer one supersedes them. | Coordinator after each verified change |
 | Owner directives | Time-boxed instructions with explicit hard stops, saved verbatim in `docs/`. | Owner |
-| Ops state (`ops/`) | Control flags (`PAUSE`, `LOCK`), delegate limits, retry limits, notification rules. | Coordinator |
-| Work board (`docs/WORK_BOARD.md`) | Lane and file ownership per machine, plus a claims table edited only through a helper. | Helper script |
+| Ops state | Control flags (`PAUSE`, `LOCK`), delegate limits, retry limits, notification rules. | Coordinator |
+| Work board | Lane and file ownership per machine, plus a claims table edited only through a helper. | Helper script |
 | Controller log | Dated, evidence-based reconciliation of every lane. | Coordinator |
 | Claims registry | Every public claim with a state, source and re-verify date. | Any lane; audited |
 
@@ -28,7 +28,7 @@ A generalized description of the mechanisms I use on a private codebase. Names o
 
 - Single coordinator; do not create another scheduler or spawn recursive agents.
 - At most 8 delegates per run, each with a named output file and no two writers on the same file.
-- If `ops/PAUSE` exists, do nothing. If `ops/LOCK` exists and is younger than three hours, exit.
+- If the `PAUSE` flag file exists in the ops state, do nothing. If the `LOCK` flag file exists and is younger than three hours, exit.
 - A failing action is tried at most twice per run; record it as a blocker and move on. Do not rerun tests with unchanged conditions.
 - Notify the owner only for an interested reply, an owner-required action, a failure, or a verified milestone. Everything else goes in the file.
 
@@ -36,7 +36,7 @@ A generalized description of the mechanisms I use on a private codebase. Names o
 
 **Two machines.** As documented in October, Machine A builds, tests, deploys and is the only one that holds the outbound-email sender; Machine B (a second workstation) takes outreach and coordination tasks and is forbidden from editing application code, documents owned by A, or running the sender. A later update gave B its own coordinator and a small set of directories it owns. The ownership table lives in the work board, and the same constraints are repeated in the starter prompt for B.
 
-**Claims.** A lane is claimed with `python marketing/work_board.py claim <id> <machine> --push`. The helper pulls with rebase, edits only the board file, commits and pushes; if git refuses, it stops and the claim is not taken. It rejects a claim whose lane belongs to the other machine, and `check` fails on a claim older than 24 hours with no progress note. On a rebase conflict the rule is: abort, never force-push, leave the resolution to Machine A. The helper has a test that creates two clones and races them. **TESTED.**
+**Claims.** A lane is claimed by running a small helper script with a lane id and a machine name. The helper pulls with rebase, edits only the board file, commits and pushes; if git refuses, it stops and the claim is not taken. It rejects a claim whose lane belongs to the other machine, and its check command fails on a claim older than 24 hours with no progress note. On a rebase conflict the rule is: abort, never force-push, leave the resolution to Machine A. The helper has a test that creates two clones and races them. **TESTED.**
 
 ## Integration
 
@@ -51,7 +51,7 @@ The private notes grade every statement with a claim level, lowest to highest: p
 
 ## Handling disagreement between documents
 
-State documents drift. The rule is that the newest dated section at the top of `PROJECT_STATE.md` supersedes older text, and every older "current" statement is marked HISTORICAL when it is superseded rather than deleted. When a document and the code disagree, the code and the audit win, and the document is corrected.
+State documents drift. The rule is that the newest dated section at the top of the state document supersedes older text, and every older "current" statement is marked HISTORICAL when it is superseded rather than deleted. When a document and the code disagree, the code and the audit win, and the document is corrected.
 
 ## Rules that exist because something went wrong
 
