@@ -40,7 +40,7 @@ The offline red-team tests use a scripted model that says the worst plausible th
 | Control | Threat | Evidence |
 |---|---|---|
 | Hours, slot grid, lead time and service-area rules enforced in the tool, not the prompt | Booking outside what the owner allows | TESTED (public) |
-| `BEGIN IMMEDIATE` plus overlap query plus a unique constraint on tenant and slot | Double booking under concurrency | TESTED (`test_frontdesk_concurrency`, public) |
+| `BEGIN IMMEDIATE` plus overlap query plus a unique constraint on tenant and slot | Double booking under concurrency | TESTED (`tests/test_lifecycle.py`, lines 69-123 of the public snapshot) |
 | Ownership check on change and cancel: only bookings made on this call or by this caller ID | A prompt-injected model touching someone else's booking | TESTED (public) |
 | Webhook delivery to customer URLs: https only, every resolved address must be public, no redirects, size and time caps, signed with a timestamp and rejected after 5 minutes of skew | SSRF and replay through customer-configured webhooks | TESTED (URL and resolver cases) |
 
