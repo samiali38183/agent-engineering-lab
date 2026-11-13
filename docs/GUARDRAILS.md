@@ -1,8 +1,8 @@
 # Guardrails: from model suggestion to consequence
 
-The runtime agent in Call Kettle answers phone calls. Anything a caller says is untrusted input, and anything the model says is untrusted output. This note lists the layers in between, the threat each one addresses, and the evidence behind it. Labels are defined in the [README](../README.md). Items marked "public" can be read in [call-kettle](https://github.com/samiali38183/call-kettle); the rest are in the private codebase.
+The runtime agent in Call Kettle answers phone calls. Anything a caller says is untrusted input, and anything the model says is untrusted output. This note lists the layers in between, the threat each one addresses and the evidence behind it. The labels are defined in the [README](../README.md). Items marked "public" can be read in [call-kettle](https://github.com/samiali38183/call-kettle), and the rest are in the private codebase.
 
-The rule behind all of it: a prompt instruction is a request, a line of code is a guarantee. Anything with consequences (booking, cancelling, transferring, spending money, telling a caller something is true) is enforced in code.
+My rule is that a prompt instruction is a request and a line of code is a guarantee. Anything with consequences (booking, cancelling, transferring, spending money, telling a caller something is true) is enforced in code.
 
 ## 1. Input layer
 
@@ -29,18 +29,18 @@ The rule behind all of it: a prompt instruction is a request, a line of code is 
 
 | Control | Threat | Evidence |
 |---|---|---|
-| Claim guard: the reply may not say booked, cancelled or moved/rescheduled unless the matching tool call succeeded this call (pattern-based; there is no pattern for transfers) | The model confirming something that did not happen | TESTED (23 truth-invariant tests and 22 failure-injection tests at the time of review; public code) |
+| Claim guard: the reply may not say booked, cancelled or moved/rescheduled unless the matching tool call succeeded this call (pattern-based; there is no pattern for transfers) | The model confirming something that did not happen | TESTED (`test_truth_invariant.py` has 23 tests and `test_failures.py` has 23; public code) |
 | Date correction on spoken dates | Wrong weekday or ordinal read aloud | IMPLEMENTED (public) |
-| No price quotes unless the exact figure is in the tenant's FAQ; no repair or safety advice | Liability from improvised advice | PROMPT-LEVEL ONLY: a prompt rule plus live spot checks, not a code guarantee. This is the weakest row in the table and I treat it as such |
+| No price quotes unless the exact figure is in the tenant's FAQ; no repair or safety advice | Liability from improvised advice | PROMPT-LEVEL ONLY: a prompt rule plus live spot checks, not a code guarantee. This is the weakest row in the table |
 
-The offline red-team tests use a scripted model that says the worst plausible thing, so they prove the code around the model, not the model's own behavior. The live-model spot check was 16 lines on one model and says so.
+The offline red-team tests use a scripted model that says the worst plausible thing, so they test the code around the model and not the model's own behavior. The live-model spot check was 16 lines on one model.
 
 ## 4. Action layer (tools)
 
 | Control | Threat | Evidence |
 |---|---|---|
 | Hours, slot grid, lead time and service-area rules enforced in the tool, not the prompt | Booking outside what the owner allows | TESTED (public) |
-| `BEGIN IMMEDIATE` plus overlap query plus a unique constraint on tenant and slot | Double booking under concurrency | TESTED (`tests/test_lifecycle.py`, lines 69-123 of the public snapshot) |
+| `BEGIN IMMEDIATE` plus overlap query plus a unique constraint on tenant and slot | Double booking under concurrency | TESTED (`tests/test_lifecycle.py` in the public snapshot) |
 | Ownership check on change and cancel: only bookings made on this call or by this caller ID | A prompt-injected model touching someone else's booking | TESTED (public) |
 | Webhook delivery to customer URLs: https only, every resolved address must be public, no redirects, size and time caps, signed with a timestamp and rejected after 5 minutes of skew | SSRF and replay through customer-configured webhooks | TESTED (URL and resolver cases) |
 
@@ -56,7 +56,7 @@ The offline red-team tests use a scripted model that says the worst plausible th
 | Duplicate request replay cache keyed by call and the carrier's idempotency token; per-call turn lock | Carrier retries doubling model cost; overlapping turns corrupting history | TESTED |
 | Telephony usage guard script | Carrier-side spend surprises | IMPLEMENTED |
 
-Capacity numbers in the notes are labeled MEASURED (produced by a harness or test), MODELED (arithmetic from repo models) or UNVERIFIED (a vendor limit from memory or config). I keep those labels on purpose: it stops a modeled number from being repeated later as a measured one.
+Capacity numbers in my notes are labeled MEASURED (produced by a harness or test), MODELED (arithmetic from repo models) or UNVERIFIED (a vendor limit from memory or config). The labels stop a modeled number from being repeated later as a measured one.
 
 ## 6. Data layer
 
@@ -72,14 +72,14 @@ Capacity numbers in the notes are labeled MEASURED (produced by a harness or tes
 ## 7. Secrets
 
 - Keys live in platform secrets. The environment file is git-ignored.
-- A test fails if a secret value from the environment appears in any tracked file; a history scan was run once during the review.
-- The master key is checked never to appear in any admin page, link or log.
-- Rule for agents: never paste a key into a prompt, chat or document. Cloud coding sessions are specified to receive no production credentials.
-- Dependency audit (`pip-audit`) was clean on 2026-09-30 and is meant to be rerun per release; I have not recorded a later run in this write-up.
+- A test fails if a secret value from the environment appears in any tracked file, and I ran a history scan once during the review.
+- A test checks that the master key never appears in an admin page, link or log.
+- Agents must never paste a key into a prompt, chat or document, and cloud coding sessions are specified to receive no production credentials.
+- The dependency audit (`pip-audit`) was clean on 2026-09-30. I mean to rerun it each release, and I haven't recorded a later run here.
 
 ## 8. Outbound compliance (sales, not the product)
 
-A written policy, built from reading public rules on 2026-10-01. It states that it is not legal advice and has not been reviewed by a lawyer.
+A written policy, built from reading public rules on 2026-10-01. It says it isn't legal advice, and no lawyer has reviewed it.
 
 - Calls are placed live by a person from a stable business number. No AI, prerecorded or synthesized voice places an outbound sales call. No autodialer. No caller-ID spoofing.
 - Published business numbers only. Identify yourself and the company first, accurately. No pretext calls.
@@ -90,7 +90,7 @@ A written policy, built from reading public rules on 2026-10-01. It states that 
 
 ## 9. What these layers do not cover
 
-- A model that is manipulated into saying something false that is not a booking, cancellation or reschedule claim. The claim guard covers consequences; it does not make every sentence true.
-- A compromised platform account or a leaked key. Controls above reduce exposure, they do not replace key rotation and account hygiene.
+- A model manipulated into saying something false that isn't a booking, cancellation or reschedule claim. The claim guard covers consequences and doesn't make every sentence true.
+- A compromised platform account or a leaked key. The controls above reduce exposure, and they don't replace key rotation and account hygiene.
 - Behavior under real customer load, which is unmeasured.
-- Anything an independent reviewer would find. The security review was written by the builder.
+- Anything an independent reviewer would find. I wrote the security review myself.

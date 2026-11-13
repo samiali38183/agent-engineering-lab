@@ -1,6 +1,6 @@
 # Evidence map
 
-Each major claim in the [README](../README.md), the source it rests on, and its status. Sources are in the private codebase unless marked public. Private files are described rather than named, so each claim stays traceable by description in a walkthrough. Dates are when the source was written or the command was run.
+Each major claim in the [README](../README.md), the source it rests on and its status. Sources are in the private codebase unless marked public. I describe private files instead of naming them, so a claim stays traceable by description in a walkthrough. The dates are when the source was written or the command was run.
 
 | Claim | Source | Status |
 |---|---|---|
@@ -10,13 +10,13 @@ Each major claim in the [README](../README.md), the source it rests on, and its 
 | Lanes with checkpoint commits, one integrator, status reconciled against evidence | The private controller log (2026-10-28 run) and commit messages | IMPLEMENTED |
 | Claim-level ladder (proposed through proven with real customers) | A private operating-notes file that defines the claim levels | IMPLEMENTED |
 | Fallback model order | The agent rules file, fallback-model rule | IMPLEMENTED as policy; not claimed as exercised |
-| 5,342 backend tests collected | `pytest --collect-only -q` in the backend virtualenv, 2026-11-05 | Command output; collection only |
+| 5,342 backend tests collected | `pytest --collect-only -q` in the backend virtualenv, 2026-11-05; same count on 2026-11-13 | Command output; collection only |
 | 7,516 passed, 5 skipped, 1 xfailed | Commit message of the DEMO8 checkpoint, 2026-10-29 | Recorded lane result; not re-run for this write-up |
 | 4,134 passed, 1 skipped, 1 xfailed | The private project state document (2026-10-15) | Recorded result |
-| About 1,550 public test items | `pytest --collect-only -q` in the public snapshot, 2026-11-05 (2 modules fail to import without private files) | Command output; collection only |
+| 1,626 public tests collected; 1,524 passed, 1 skipped, 101 xfailed | `pytest -q` in the public snapshot's `backend/` directory, 2026-11-13 (two modules that need private files are skipped at collection) | Command output |
 | CI runs builds, audits and both suites on push and PR | The private repo's CI workflow; the public snapshot has its own `.github/workflows/ci.yml` | IMPLEMENTED. I do not state the current pass or fail status of either |
 | Heartbeat against API health and the public site: every 15 minutes in the private repo, every 6 hours in the public snapshot | `.github/workflows/heartbeat.yml` in each repo (cron `*/15 * * * *` private, `0 */6 * * *` public) | DEPLOYED (private); public workflow IMPLEMENTED |
-| Live self-check of 27-28 checks | Private project state notes (deploy notes, October); `backend/scripts/selfcheck.py` (public); I did not re-run the count for this write-up | DEPLOYED |
+| A live self-check script run after each deploy | Private project state notes (deploy notes, October); `backend/scripts/selfcheck.py` (public) | DEPLOYED |
 | Flaky test root-caused to wall-clock dependence | A private write-up of the flaky-test investigation (2026-10-15) | TESTED |
 | 75 resilience tests, 18 failing before fixes | A private resilience audit and `backend/tests/test_resilience_chaos.py` (public). The audit was written 2026-10-04 and the test file was first committed the same day; the public snapshot also contains `test_resilience_chaos.py` | TESTED |
 | 40-scenario red team with failing-before, passing-after tests | A private red-team report (2026-10-13; offline tests with a scripted model; live part was 16 single-turn lines) | TESTED |
@@ -32,10 +32,10 @@ Each major claim in the [README](../README.md), the source it rests on, and its 
 | Outbound compliance policy | A private outbound-compliance policy note (2026-10-01; states it is not legal advice) | IMPLEMENTED as policy |
 | Written guide for cloud coding sessions with least privilege | A private guide for cloud coding sessions (2026-10-02; says no cloud session had been launched) | PLANNED / guide only |
 | Scheduled agent jobs (health alert, weekday brief, weekly watchdog) | The private controller log (2026-10-28) | DEPLOYED as of that date |
-| About 870 commits | `git log --oneline` in the private repo, 868 on 2026-11-05 | Command output |
+| About 870 commits | `git rev-list --count HEAD` in the private repo: 868 on 2026-11-05 and again on 2026-11-13 | Command output |
 
 ## Not claimed, and why
 
-- **Customers, revenue, uptime, call volume.** None are documented as proven, so none are stated.
-- **A dedicated role for Codex.** It is installed and has local session records, but no written lane or decision records what it did on this project, so I list it as used and describe nothing more.
-- **Public CI status.** The public snapshot's CI result changes over time and is not part of the evidence here.
+- Customers, revenue, uptime and call volume. None are documented as proven, so I state none.
+- A dedicated role for Codex. It is installed and has local session records, but no written lane or decision records what it did on this project, so I list it as used and describe nothing more.
+- Public CI status. The public snapshot's CI result changes over time, so it isn't part of the evidence here.
